@@ -1,0 +1,10 @@
+.env*
+!.env.example
+__pycache__/
+.venv/
+node_modules/
+.next/
+*.tfstate*
+.terraform/
+data/lake/
+*.code-workspace
