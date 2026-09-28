@@ -14,11 +14,11 @@ dbt builds against fixture Parquet, marts and data tests pass, analytics exports
 - **Do not:** Add warehouse-specific SQL that prevents DuckDB local execution.
 
 ## T5.2 Marts and data tests
-- **Goal:** Build the four documented marts and enforce correctness.
+- **Goal:** Build the four documented marts and enforce correctness, including the implementation behind the existing ADR-011 `/trending` contract.
 - **Files:** Create models for daily mentions, co-occurrence, entities/sources, trending; schema/tests/docs.
 - **Approach:** Define date grain and deduplication; calculate trailing 14-day z-score with explicit zero/stddev behavior; use stable entity IDs; add uniqueness, not-null, relationships, accepted-values tests.
 - **Dependencies:** T5.1 and source schemas.
-- **Acceptance:** `dbt build` passes fixtures; model columns/grains match `docs/DATA_MODEL.md`; edge cases for no baseline/zero variance have deterministic output; test failures fail build.
+- **Acceptance:** `dbt build` passes fixtures; model columns/grains match `docs/DATA_MODEL.md`; edge cases for no baseline/zero variance have deterministic output; the existing `/trending` contract test passes against the analytics implementation; test failures fail build.
 - **Tests:** Fixture-based SQL/data tests and expected-output comparisons.
 - **Risks/unknowns:** Trending score formula details, timezone, and behavior with sparse history are ambiguous.
 - **Do not:** Invent a ranking formula without documenting it and updating open questions/decisions.

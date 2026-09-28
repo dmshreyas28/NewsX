@@ -4,11 +4,11 @@
 Vector/graph retrieval, cited `/ask`, web Ask UI, and human-labeled evaluation metrics are implemented and tracked over at least three iterations.
 
 ## T6.1 Chunk and embed
-- **Goal:** Generate article chunks/embeddings without storing article text in the graph/API.
+- **Goal:** Generate versioned 384-dimensional article/entity embeddings without storing article text in serving systems.
 - **Files:** Create chunker/embedder, model config, migrations/indexes, cache/usage logging, and tests.
-- **Approach:** Process transient text; persist only chunk identity/embedding and permitted metadata; configure model/dimension; batch/retry/cache by content hash; create HNSW after dimension decision.
+- **Approach:** Process permitted text from private `lake/private/article_text/`; persist only versioned chunk/entity identity, 384-dimensional embedding, and `embedding_model`; configure `EMBEDDING_MODEL`/`EMBEDDING_DIM`; batch/retry/cache by content hash; create HNSW indexes; run the required bake-off against an API embedding model.
 - **Dependencies:** T1.1/T1.2/T1.6, ADR-009, verified provider/model/pricing.
-- **Acceptance:** Fixture produces deterministic chunk IDs and vectors of configured dimension; rerun is idempotent/cacheable; HNSW query returns IDs; no chunk text is persisted or returned.
+- **Acceptance:** Synthetic or license-clear fixture produces deterministic chunk IDs and 384-dimensional vectors with `embedding_model`; rerun is idempotent/cacheable; HNSW query returns IDs; no chunk text is persisted or returned; bake-off results are recorded.
 - **Tests:** Chunk boundaries, dimension, cache, provider retry, migration/index, and prohibited-storage tests.
 - **Risks/unknowns:** Model ID/dimension/pricing, chunk policy, and pgvector index tuning are unverified.
 - **Do not:** Store raw chunks or cite embeddings as article content.
@@ -21,14 +21,14 @@ Vector/graph retrieval, cited `/ask`, web Ask UI, and human-labeled evaluation m
 - **Acceptance:** Fixture query returns stable top-k IDs and graph facts; depth/context limits are enforced; unavailable vector/graph service produces typed failure; every context item has an ID.
 - **Tests:** Recall fixture, ranking tie behavior, bounds, missing data, and injection/content policy tests.
 - **Risks/unknowns:** Reranker/model choice, top-k, context budget, and graph fact serialization are unspecified.
-- **Do not:** Pass arbitrary article text to the UI or allow unbounded graph expansion.
+- **Do not:** Pass private article text to the UI or allow unbounded graph expansion.
 
 ## T6.3 `/ask`
 - **Goal:** Serve cited GraphRAG answers with refusal behavior for unsupported claims.
 - **Files:** API route/service/schemas, prompt version, provider adapter reuse, cache/usage logging, and tests.
 - **Approach:** Retrieve bounded context; prompt model to cite IDs and refuse unsupported claims; validate answer/citations schema; map IDs to URLs; handle provider/retrieval failure and cache safely.
 - **Dependencies:** T6.2, T1.6, T2.4; model/pricing verification.
-- **Acceptance:** Supported fixture question returns answer with valid article citations; unsupported question returns documented refusal; fabricated citation/unknown ID is rejected; response contains no raw article text.
+- **Acceptance:** Synthetic or license-clear fixture question returns answer with valid article citations; unsupported question returns documented refusal; fabricated citation/unknown ID is rejected; response contains no article text.
 - **Tests:** Citation precision/schema, refusal, unknown facts, timeout/retry, cache, and prohibited-content tests.
 - **Risks/unknowns:** Answer schema, refusal wording, judge model, and citation mapping are not fully defined.
 - **Do not:** Present model knowledge as graph knowledge or return uncited factual claims.

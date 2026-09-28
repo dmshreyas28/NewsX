@@ -11,8 +11,8 @@
 - events(id, article_id, event_type, summary, occurred_at NULL, confidence)
 - event_participants(event_id, entity_id, role)
 - relations(id, subject_id, predicate, object_id, article_id, confidence, UNIQUE(subject_id,predicate,object_id,article_id))
-- article_chunks(id, article_id, chunk_idx, embedding vector(N))  -- N set by embedding model, in config
-- entity_embeddings(entity_id, embedding vector(N))
+- article_chunks_v1(id, article_id, chunk_idx, embedding vector(384), embedding_model)
+- entity_embeddings_v1(entity_id, embedding vector(384), embedding_model)
 - pipeline_runs(id, run_date, task, started_at, finished_at, status, rows_in, rows_out, meta jsonb)
 - llm_calls(id, task, model, prompt_hash, tokens_in, tokens_out, cost_usd, cached bool, created_at)
 
@@ -34,8 +34,11 @@ retention/pruning policy so the graph stays within limits (e.g. keep last N days
 Article nodes, keep aggregated edges).
 
 ## Lake (Parquet)
-raw/articles, raw/mentions, raw/events partitioned by date. Schemas versioned and
-enforced with pandera. dbt reads these via DuckDB.
+`lake/<layer>/<table>/date=D/run_id=R/*.parquet`, with active runs selected by
+`lake/_manifests/<table>/date=D.json`. Immutable run outputs are cleaned up after a
+configured number of days. Permitted article text is separate private input under
+`lake/private/article_text/`, expires after 30 days, and is never in serving tables.
+Schemas are versioned and enforced with pandera. dbt reads active runs via manifests.
 
 ## dbt marts
 - fct_entity_mentions_daily(entity_id, date, mention_count, article_count)

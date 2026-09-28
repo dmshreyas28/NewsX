@@ -19,10 +19,12 @@ This file records ambiguity, contradiction, and unverified facts found in the su
 - Select retention/pruning and aggregation policy that preserves useful graph behavior.
 - Required before production projection; limits are explicitly marked TODO(verify) in the data model.
 
-### ADR-009: Embeddings
-- Select embedding model, dimension, provider, pricing, licensing, and migration policy.
-- Dimension affects `vector(N)`, HNSW indexes, cache keys, and evaluation.
-- Required before T1.1 production schema and T6.1.
+### Resolved decisions
+- ADR-002 amended the article-text storage policy; see `docs/DECISIONS.md`.
+- ADR-009 resolved the initial 384-dimensional embedding baseline and versioned-table
+  migration policy; verify the model card and license before implementation.
+- ADR-010 resolved immutable run outputs plus manifest pointers for lake reads.
+- ADR-011 resolved the `/trending` contract and Phase 2/Phase 5 implementation split.
 
 ## Cross-document ambiguities
 
@@ -30,10 +32,12 @@ This file records ambiguity, contradiction, and unverified facts found in the su
 - README says `make migrate && make ingest-sample`, while the roadmap also requires `make check`, `make test`, `make api`, `make web`, `make rebuild-graph`, and `make ingest-sample`; define the complete Make target contract and expected prerequisites.
 - AGENTS requires mypy strict on new Python code and TypeScript strict/ESLint/Prettier, but supported Python/Node versions, package managers, lockfile formats, and exact tool versions are not specified.
 - AGENTS says every task ends with tests, lint/type checks, and docs updates; some roadmap tasks are infrastructure/manual tasks where a local check may be impossible. Define the CI substitute and evidence standard.
-- Architecture says the lake is append-only but also says reruns overwrite a date partition atomically. Define whether replacement is append-only at the object/version level and how readers avoid partial partitions.
-- Architecture says raw Parquet contains fetched article text, while AGENTS/DATA_MODEL prohibit storing article text in the graph/API and describe derived-only storage. Clarify whether raw lake text is allowed, retention duration, access controls, and whether “never store it in the graph” differs from “never store it anywhere.”
-- DATA_MODEL says `article_chunks` store embeddings, not text, but T6 requires chunking transient article text; define exact persisted columns and retrieval response policy.
-- `article_chunks.embedding vector(N)` says N is config, while migrations need a fixed database type/index. Define one dimension per environment or a migration strategy for changes.
+- ADR-010 resolves the prior append-only/overwrite wording using immutable run outputs
+  and a manifest pointer; define the cleanup value N during implementation.
+- ADR-002 resolves private article-text persistence, access, and 30-day expiry; the
+  remaining implementation question is the exact storage adapter and lifecycle test.
+- ADR-009 resolves the initial embedding dimension and versioned tables; verify the
+  model card/license and define migration SQL during T1.1.
 - Event extraction says input may include truncated text, while the article text policy is ambiguous for transient processing and logs. Define maximum token budget and redaction/logging guarantees.
 - Article status values are listed, but allowed transitions, retry/failed reason storage, and whether stages may skip statuses are undefined.
 - “Merge same-surface mentions per article” conflicts with mention offsets and potentially distinct contexts; define merge key and whether all spans are retained.

@@ -11,9 +11,14 @@ Read this file, then docs/ROADMAP.md, before doing anything. Work on ONE task at
 5. Stop and report if a task's acceptance criteria are ambiguous or conflict with docs.
    Do not guess silently.
 6. Do not copy code from third-party repos. Use libraries via their public APIs.
-7. Article text is processing input only. Never store it in the graph, never return
-   it from the API, never render it in the UI. Store URL, title, publisher, dates,
-   and derived data (entities, events, short model-generated summaries).
+7. Fetched article text is processing input. It may be persisted only under the private
+   lake path `lake/private/article_text/` (local `./data/lake/private`, gitignored),
+   with no public access and a 30-day lifecycle expiry, for reproducible reruns,
+   backfills, and evals. Never store it in Postgres or Neo4j, return it from the API,
+   render it in the UI, log it, or commit it in fixtures. Respect robots.txt and
+   per-source terms; where full text is not permitted, use feed-provided summaries.
+   Store URL, title, publisher, dates, and derived data (entities, events, short
+   model-generated summaries).
 
 ## Conventions
 - Python 3.11+, uv or pip-tools for deps, ruff (lint+format), mypy --strict on new code,

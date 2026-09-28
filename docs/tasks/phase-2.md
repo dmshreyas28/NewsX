@@ -17,10 +17,10 @@ The local stack supports search/entity/graph/trending/article flows, generated-c
 - **Goal:** Implement `/entities/search`, entity detail/neighbors, `/graph/path`, `/trending`, and `/articles/{id}`.
 - **Files:** Create route/service/repository modules, schemas, query tests, and OpenAPI updates.
 - **Approach:** Use Postgres as canonical for metadata and Neo4j for graph traversal where appropriate; add pagination and stable ordering; return model-generated summaries only; parameterize all queries.
-- **Dependencies:** T2.1, T1.1/T1.7, analytics output availability for trending.
+- **Dependencies:** T2.1, T1.1/T1.7. `/trending` uses the Phase 2 Postgres implementation; Phase 5 swaps only the implementation to the analytics mart.
 - **Acceptance:** Contract fixtures return documented status/schema; nonexistent IDs return standard 404; pagination is stable; graph path bounds depth; article response omits text; queries are explainable and indexed.
 - **Tests:** Unit repository tests, DB integration tests, contract tests, authorization/rate-limit preparation, and prohibited-field assertions.
-- **Risks/unknowns:** Exact response shapes, trending source before Phase 5, and graph path semantics are underspecified.
+- **Risks/unknowns:** Exact non-trending response shapes and graph path semantics remain underspecified; the `/trending` contract is fixed by ADR-011.
 - **Do not:** Add auth/accounts or return raw snippets/text.
 
 ## T2.3 Redis caching

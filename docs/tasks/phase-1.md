@@ -7,7 +7,7 @@ A one-day run completes locally in Docker, ER F1 is reported, and pipeline test 
 - **Goal:** Implement the `core` Postgres schema in `docs/DATA_MODEL.md` with forward-only migrations and a migration runner.
 - **Files:** Create `db/migrations/NNNN_*.sql`, migration tooling, schema tests, and Make targets.
 - **Approach:** Add tables, enums/checks, foreign keys, uniqueness, indexes, vector dimension configuration strategy, and timestamps; make reruns safe through the migration tool, not ad hoc SQL.
-- **Dependencies:** Phase 0; ADR-009 decision is needed before production vector dimension is fixed, so use an explicitly configurable/test dimension if permitted.
+- **Dependencies:** Phase 0; ADR-009 fixes the initial 384-dimensional versioned embedding tables and requires `EMBEDDING_MODEL`/`EMBEDDING_DIM` configuration.
 - **Acceptance:** `make migrate` applies all migrations to an empty Postgres; second run is a no-op; introspection shows required tables/constraints/indexes; rollback is not assumed because migrations are forward-only.
 - **Tests:** Fresh database integration tests, constraint/upsert tests, and migration idempotency.
 - **Risks/unknowns:** Embedding dimension, enum evolution, migration runner choice, and exact article status transition rules are unspecified.
@@ -16,32 +16,32 @@ A one-day run completes locally in Docker, ER F1 is reported, and pipeline test 
 ## T1.2 Ingestion connectors
 - **Goal:** Ingest RSS and GDELT metadata/text processing inputs with canonical URLs, deduplication, extraction, and rate limiting.
 - **Files:** Create connector modules, canonicalization/dedup utilities, persistence adapters, fixtures, and tests.
-- **Approach:** Define typed connector records; normalize URLs; deduplicate by URL and title/content hash; fetch/extract text only as transient processing input; persist permitted metadata and hashes; handle retries and per-source rate limits; make date reruns upsert-safe.
+- **Approach:** Define typed connector records; normalize URLs; deduplicate by URL and title/content hash; fetch/extract text only as processing input and persist permitted text only under private `lake/private/article_text/` with 30-day expiry; respect robots.txt/source terms and use feed summaries when needed; persist metadata and hashes; handle retries and per-source rate limits; make date reruns upsert-safe.
 - **Dependencies:** T1.1 and config/logging; source credentials and GDELT API behavior need verification.
-- **Acceptance:** Fixture RSS/GDELT inputs produce deterministic article metadata; duplicate URL/hash yields one article; failed fetch is represented with status/error metadata; no article body is persisted or returned; repeated date run has unchanged row counts.
+- **Acceptance:** Fixture RSS/GDELT inputs produce deterministic article metadata; duplicate URL/hash yields one article; failed fetch is represented with status/error metadata; permitted text is private, expires after 30 days, and is absent from Postgres/API/logs/fixtures; repeated date run has unchanged row counts.
 - **Tests:** Parser fixtures, URL normalization, dedup, retry/rate-limit, extraction failure, and idempotency tests; mocked external calls only.
 - **Risks/unknowns:** GDELT endpoint/schema, publisher robots/ToS, canonical URL rules, and retention of transient text are not fully specified.
-- **Do not:** Scrape indiscriminately, bypass publisher restrictions, or expose/store raw text.
+- **Do not:** Scrape indiscriminately, bypass publisher restrictions, or expose/store text outside private `lake/private/article_text/`.
 
 ## T1.3 Lake writer and schemas
 - **Goal:** Write versioned Parquet raw partitions atomically with Pandera validation.
 - **Files:** Create lake writer, schemas, fixture data, partition tests, and config docs.
 - **Approach:** Define article/mention/event schemas and schema versions; write to a temporary partition then atomically replace the target date; validate null rates/types/row counts before publish; support local lake and later S3 abstraction.
 - **Dependencies:** T1.2; event/mention fields from later tasks must be versioned rather than guessed.
-- **Acceptance:** `make ingest-sample` writes `data/lake/raw/articles/date=YYYY-MM-DD/*.parquet`; invalid rows fail before replacement; rerunning a date replaces only that partition; DuckDB can read the fixture partition.
+- **Acceptance:** `make ingest-sample` writes an immutable run under `lake/<layer>/<table>/date=D/run_id=R/*.parquet` and writes the active manifest last; invalid rows fail before pointer update; old runs are not selected; DuckDB resolves the fixture through the manifest.
 - **Tests:** Schema validation, atomic failure, overwrite isolation, empty input, and round-trip tests.
 - **Risks/unknowns:** S3 atomicity semantics, exact schema version policy, and partition file naming are unspecified.
-- **Do not:** Treat the lake as mutable row storage or write unvalidated partitions.
+- **Do not:** Treat run outputs as mutable row storage, bypass the manifest, or write unvalidated partitions.
 
 ## T1.4 NER
 - **Goal:** Extract typed mentions with configurable spaCy models and persist auditable offsets.
 - **Files:** Create NER stage, model configuration, mention repository, fixtures, and tests.
-- **Approach:** Process transient article text; use configurable model (small CI model); emit surface, label, offsets, sentence hash, and article ID; validate offsets and supported labels; update article status transactionally.
+- **Approach:** Process permitted text from private `lake/private/article_text/`; use configurable model (small CI model); emit surface, label, offsets, sentence hash, and article ID; validate offsets and supported labels; update article status transactionally.
 - **Dependencies:** T1.1 and T1.2; model availability must be verified.
 - **Acceptance:** Fixture text yields deterministic mentions with valid non-overlapping offsets; unsupported labels are handled by documented mapping; rerun does not duplicate mentions; counts are logged.
 - **Tests:** Golden NER fixtures, offsets, empty text, model failure, transaction/idempotency tests.
 - **Risks/unknowns:** Transformer model size/performance, label mapping, and sentence hash algorithm are unspecified.
-- **Do not:** Persist article text in Postgres, lake, graph, logs, or API responses.
+- **Do not:** Persist article text outside private `lake/private/article_text/`; never put it in Postgres, graph, logs, fixtures, or API responses.
 
 ## T1.5 Entity resolution and evaluation
 - **Goal:** Link mentions to Wikidata QIDs or clustered NIL entities per the resolution design and report metrics.
@@ -57,7 +57,7 @@ A one-day run completes locally in Docker, ER F1 is reported, and pipeline test 
 - **Goal:** Extract schema-valid events/relations with caching, retries, and usage logging.
 - **Files:** Create versioned prompts, Pydantic output schemas, provider adapter, cache, persistence, and tests.
 - **Approach:** Load model/temperature/token settings from config; hash prompt version/model/input; send only allowed metadata, text transiently, and resolved IDs; validate JSON; perform one repair retry; mark failures; record token/cost/cache fields.
-- **Dependencies:** T1.4/T1.5, T1.1, and verified provider/model/pricing; ADR-009 only if embeddings are coupled.
+- **Dependencies:** T1.4/T1.5, T1.1, and ADR-009's configured local 384-dimensional embedding baseline; API-model pricing is only needed for the later bake-off.
 - **Acceptance:** Fixture provider returns events/relations constrained to supplied IDs; malformed output gets one repair then failed status; cache hit avoids a call; `llm_calls` records usage; summaries obey length rule.
 - **Tests:** Schema validation, prompt hashing, cache, retry, refusal of unknown IDs, cost logging, and failure status tests with mocked provider.
 - **Risks/unknowns:** Provider API, model IDs/pricing, token counting, and cost calculation are explicitly unverified.

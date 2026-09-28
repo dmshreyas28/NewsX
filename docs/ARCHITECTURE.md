@@ -5,10 +5,15 @@ Turn ~500 news articles/day into a queryable knowledge graph of entities, events
 and relationships, with an explorer UI and a question-answering interface.
 
 ## Data flow
-1. Ingest: RSS (feedparser) + GDELT -> article metadata + fetched text (trafilatura).
+1. Ingest: RSS (feedparser) + GDELT -> article metadata + fetched text (trafilatura)
+   when permitted. Respect robots.txt and source terms; otherwise use feed summaries.
    Dedup by canonical URL and near-duplicate title/content hash.
-2. Raw layer: write immutable daily Parquet to the lake (S3 in cloud, ./data/lake locally):
-   lake/raw/articles/date=YYYY-MM-DD/*.parquet
+2. Raw layer: persist permitted processing text only under private, non-public
+   `lake/private/article_text/` with a 30-day lifecycle. Write immutable run outputs
+   and a mutable manifest pointer (S3 in cloud, `./data/lake` locally):
+   `lake/<layer>/<table>/date=D/run_id=R/*.parquet`, with
+   `lake/_manifests/<table>/date=D.json` written last. Readers resolve active runs
+   through the manifest; local private data is gitignored.
 3. NER: spaCy (transformer model configurable; small model for CI) -> mentions.
 4. Entity resolution: mentions -> Wikidata QIDs (see ENTITY_RESOLUTION.md).
 5. Event/relation extraction: LLM with JSON-schema output (see PROMPTS.md).
@@ -22,7 +27,8 @@ and relationships, with an explorer UI and a question-answering interface.
 ## Key principles
 - Postgres is the single source of truth. Neo4j is a derived projection and can be
   dropped and rebuilt from Postgres at any time (`make rebuild-graph`).
-- The lake is append-only; reruns for a date overwrite that date's partition atomically.
+- The lake has immutable run outputs and a mutable manifest pointer; old runs are
+  removed by configured lifecycle/cleanup after N days.
 - Orchestration (Airflow) calls the same pipeline entrypoints as the CLI. No logic in DAG files.
 - Every stage has a data-quality gate (pandera schemas + row-count/null-rate checks).
   A failed gate fails the task and does not load downstream.
