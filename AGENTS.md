@@ -19,6 +19,8 @@ Read this file, then docs/ROADMAP.md, before doing anything. Work on ONE task at
    per-source terms; where full text is not permitted, use feed-provided summaries.
    Store URL, title, publisher, dates, and derived data (entities, events, short
    model-generated summaries).
+8. Never force-push, never delete branches or repositories, and never run destructive
+   git/gh commands without explicit human approval.
 
 ## Conventions
 - Python 3.11+, uv or pip-tools for deps, ruff (lint+format), mypy --strict on new code,

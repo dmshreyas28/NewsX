@@ -1,6 +1,9 @@
 # Manual setup (human tasks — agents must not attempt these)
 
-- [ ] GitHub repo, branch protection on main, require CI
+- [ ] GitHub repo
+- [ ] After T0.3's first CI run passes on the combined output of T0.1 and T0.2
+  (neither was run in CI), enable branch protection on main requiring the CI check.
+  Do not require the CI check before this run passes.
 - [ ] Neon project + pgvector extension enabled; connection string -> .env
 - [ ] Neo4j AuraDB Free instance; note free-tier limits and inactivity pausing behavior.
   After creating the Aura instance, record the actual node and relationship limits shown
