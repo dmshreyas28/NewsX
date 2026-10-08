@@ -13,7 +13,7 @@ Exit: `make check` green in CI on an empty-but-wired repo; `docker compose up` h
 ## Phase 1 — Core pipeline (correctness first)
 - T1.1 db/migrations: core schema from DATA_MODEL.md; migration runner; tests
 - T1.2 Ingest: RSS + GDELT connectors, canonical URL, dedup, text extraction, rate limiting
-- T1.3 Lake writer (Parquet, partition overwrite) + pandera schemas
+- T1.3 Lake writer (Parquet immutable run outputs + manifest pointer) + pandera schemas
 - T1.4 NER stage + mentions persistence
 - T1.5 Entity resolution per ENTITY_RESOLUTION.md + evals/er runner and labeled set (human task: labeling)
 - T1.6 LLM extraction per PROMPTS.md + llm_calls logging + cache

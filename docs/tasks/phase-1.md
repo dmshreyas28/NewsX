@@ -6,11 +6,11 @@ A one-day run completes locally in Docker, ER F1 is reported, and pipeline test 
 ## T1.1 Canonical schema and migrations
 - **Goal:** Implement the `core` Postgres schema in `docs/DATA_MODEL.md` with forward-only migrations and a migration runner.
 - **Files:** Create `db/migrations/NNNN_*.sql`, migration tooling, schema tests, and Make targets.
-- **Approach:** Add tables, enums/checks, foreign keys, uniqueness, indexes, vector dimension configuration strategy, and timestamps; make reruns safe through the migration tool, not ad hoc SQL.
-- **Dependencies:** Phase 0; ADR-009 fixes the initial 384-dimensional versioned embedding tables and requires `EMBEDDING_MODEL`/`EMBEDDING_DIM` configuration.
+- **Approach:** Add tables, enums/checks, foreign keys, uniqueness, indexes, fixed 384-dimensional versioned embedding tables, and timestamps; validate `EMBEDDING_DIM` at startup against the table version and fail loudly on mismatch (ADR-013); make reruns safe through the migration tool, not ad hoc SQL.
+- **Dependencies:** Phase 0; ADR-009 fixes the initial 384-dimensional versioned embedding tables and requires `EMBEDDING_MODEL`/`EMBEDDING_DIM`; ADR-013 defines startup validation.
 - **Acceptance:** `make migrate` applies all migrations to an empty Postgres; second run is a no-op; introspection shows required tables/constraints/indexes; rollback is not assumed because migrations are forward-only.
 - **Tests:** Fresh database integration tests, constraint/upsert tests, and migration idempotency.
-- **Risks/unknowns:** Embedding dimension, enum evolution, migration runner choice, and exact article status transition rules are unspecified.
+- **Risks/unknowns:** Enum evolution, migration runner choice, and exact article status transition rules are unspecified. Embedding dimension is fixed per table version (ADR-009/013).
 - **Do not:** Create Neo4j as a second source of truth or store article text in graph/API records.
 
 ## T1.2 Ingestion connectors
@@ -24,13 +24,13 @@ A one-day run completes locally in Docker, ER F1 is reported, and pipeline test 
 - **Do not:** Scrape indiscriminately, bypass publisher restrictions, or expose/store text outside private `lake/private/article_text/`.
 
 ## T1.3 Lake writer and schemas
-- **Goal:** Write versioned Parquet raw partitions atomically with Pandera validation.
+- **Goal:** Write versioned immutable Parquet run outputs with an atomic active-manifest update and Pandera validation.
 - **Files:** Create lake writer, schemas, fixture data, partition tests, and config docs.
-- **Approach:** Define article/mention/event schemas and schema versions; write to a temporary partition then atomically replace the target date; validate null rates/types/row counts before publish; support local lake and later S3 abstraction.
+- **Approach:** Define article/mention/event schemas and schema versions; write immutable outputs to `lake/<layer>/<table>/date=D/run_id=R/*.parquet`, validate null rates/types/row counts, then write `lake/_manifests/<table>/date=D.json` as the active-run pointer last. Cleanup superseded outputs per `RUN_RETENTION_DAYS` (default 14) and never delete a run referenced by any current manifest (ADR-010/012); retain private article text for exactly 30 days (ADR-002). Document that backfills older than 30 days cannot rerun steps requiring article text.
 - **Dependencies:** T1.2; event/mention fields from later tasks must be versioned rather than guessed.
 - **Acceptance:** `make ingest-sample` writes an immutable run under `lake/<layer>/<table>/date=D/run_id=R/*.parquet` and writes the active manifest last; invalid rows fail before pointer update; old runs are not selected; DuckDB resolves the fixture through the manifest.
-- **Tests:** Schema validation, atomic failure, overwrite isolation, empty input, and round-trip tests.
-- **Risks/unknowns:** S3 atomicity semantics, exact schema version policy, and partition file naming are unspecified.
+- **Tests:** Schema validation, failed-run manifest stability, manifest switch, retention protection for referenced runs, empty input, and round-trip tests.
+- **Risks/unknowns:** S3 manifest-write consistency and exact schema version policy are unspecified; cleanup must remain manifest-safe.
 - **Do not:** Treat run outputs as mutable row storage, bypass the manifest, or write unvalidated partitions.
 
 ## T1.4 NER
@@ -66,11 +66,11 @@ A one-day run completes locally in Docker, ER F1 is reported, and pipeline test 
 ## T1.7 Neo4j projection
 - **Goal:** Build an idempotent Neo4j projection from Postgres and support rebuild.
 - **Files:** Create projector, Cypher constraints/queries, CLI/Make target, and integration tests.
-- **Approach:** Read canonical rows; use stable IDs and MERGE; replace/update derived relationships safely; isolate projection transactions; implement drop/rebuild from Postgres; never write graph-only facts.
-- **Dependencies:** T1.1 and extracted data; Neo4j local service; retention decision ADR-008 for production sizing.
-- **Acceptance:** Projecting twice produces same node/relationship counts; changed canonical data updates projection; `make rebuild-graph` recreates equivalent graph; constraints exist; article nodes contain metadata only.
+- **Approach:** Read canonical rows; use stable IDs and MERGE; keep Postgres full history while projecting Entity/Event nodes, weighted entity edges, and Article nodes only within `ARTICLE_WINDOW_DAYS` (default 14); emit `CO_OCCURS_WITH` only above `CO_OCCUR_MIN_WEIGHT` for top-K entities/day and prune by `last_seen`. Check Neo4j counts before writes; at 90% of `NEO4J_MAX_NODES`/`NEO4J_MAX_RELS`, fail soft by skipping lowest-priority edges and logging skipped count. Use bounded retry for a paused instance to resume. Isolate projection transactions; implement drop/rebuild from Postgres; never write graph-only facts.
+- **Dependencies:** T1.1 and extracted data; Neo4j local service; ADR-008 defines sizing and projection policy; actual Aura limits must be verified in the console (TODO(verify)).
+- **Acceptance:** Projecting twice produces same node/relationship counts; changed canonical data updates projection; `make rebuild-graph` recreates equivalent bounded graph; constraints exist; article nodes contain metadata only and stay within the rolling window; a synthetic near-cap fixture confirms lowest-priority edges are skipped and counted; paused-instance retry is bounded.
 - **Tests:** Testcontainer/local integration, idempotency, rebuild equivalence, constraint, and failure/retry tests.
-- **Risks/unknowns:** Neo4j driver/version, relationship aggregation semantics, and Aura limits/retention are unverified.
+- **Risks/unknowns:** Neo4j driver/version and relationship aggregation semantics remain unspecified; actual Aura limits require console verification (TODO(verify)).
 - **Do not:** Dual-write from pipeline stages or store article text.
 
 ## T1.8 Quality gates and run bookkeeping

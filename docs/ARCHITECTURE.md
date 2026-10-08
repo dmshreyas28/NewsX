@@ -28,7 +28,12 @@ and relationships, with an explorer UI and a question-answering interface.
 - Postgres is the single source of truth. Neo4j is a derived projection and can be
   dropped and rebuilt from Postgres at any time (`make rebuild-graph`).
 - The lake has immutable run outputs and a mutable manifest pointer; old runs are
-  removed by configured lifecycle/cleanup after N days.
+  removed when superseded after `RUN_RETENTION_DAYS` (default 14), but cleanup must
+  never remove a run referenced by any current manifest (ADR-010, ADR-012). Private
+  article text expires at 30 days (ADR-002). Backfills older than 30 days cannot rerun
+  stages that require that text.
+- Postgres retains full history while Neo4j is a bounded projection: Article nodes use
+  a rolling 14-day default window and graph size is capped/configured per ADR-008.
 - Orchestration (Airflow) calls the same pipeline entrypoints as the CLI. No logic in DAG files.
 - Every stage has a data-quality gate (pandera schemas + row-count/null-rate checks).
   A failed gate fails the task and does not load downstream.

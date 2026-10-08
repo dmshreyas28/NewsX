@@ -29,14 +29,22 @@ Rels: (Entity)-[:MENTIONED_IN {count}]->(Article), (Entity)-[:PARTICIPATES_IN {r
 (Event)-[:REPORTED_IN]->(Article), (Entity)-[:RELATED_TO {predicate, weight}]->(Entity),
 (Entity)-[:CO_OCCURS_WITH {weight, last_seen}]->(Entity)
 Constraints: unique Entity.id, Article.id, Event.id.
-Sizing: verify current Aura Free node/relationship limits (TODO(verify)); design a
-retention/pruning policy so the graph stays within limits (e.g. keep last N days of
-Article nodes, keep aggregated edges).
+Sizing: design for the AuraDB Free lower bound of 50,000 nodes / 175,000 relationships
+(TODO(verify) actual limits in the Aura console when creating the instance;
+`NEO4J_MAX_NODES`, `NEO4J_MAX_RELS`). Postgres retains full history. Neo4j contains
+Entity and Event nodes, weighted entity-entity edges, and Article nodes only within the
+rolling `ARTICLE_WINDOW_DAYS` window (default 14). Create `CO_OCCURS_WITH` only above
+`CO_OCCUR_MIN_WEIGHT` and for top-K entities per day; prune by `last_seen`. Before
+writing, the projector checks counts and fails soft at 90% of configured caps by
+skipping lowest-priority edges and logging skipped counts. Paused instances receive
+bounded retry for resume. See ADR-008.
 
 ## Lake (Parquet)
 `lake/<layer>/<table>/date=D/run_id=R/*.parquet`, with active runs selected by
 `lake/_manifests/<table>/date=D.json`. Immutable run outputs are cleaned up after a
-configured number of days. Permitted article text is separate private input under
+configured `RUN_RETENTION_DAYS` (default 14); cleanup never deletes any run referenced
+by a current manifest. Backfills older than 30 days cannot rerun steps requiring
+article text. Permitted article text is separate private input under
 `lake/private/article_text/`, expires after 30 days, and is never in serving tables.
 Schemas are versioned and enforced with pandera. dbt reads active runs via manifests.
 

@@ -14,17 +14,16 @@ This file records ambiguity, contradiction, and unverified facts found in the su
 - Compare always-on cost, Airflow persistence, retries/backfills, secrets, networking, and failure recovery.
 - Required before Phase 4 T4.3.
 
-### ADR-008: Neo4j retention
-- Verify current Aura Free node/relationship/storage/inactivity limits.
-- Select retention/pruning and aggregation policy that preserves useful graph behavior.
-- Required before production projection; limits are explicitly marked TODO(verify) in the data model.
-
 ### Resolved decisions
 - ADR-002 amended the article-text storage policy; see `docs/DECISIONS.md`.
+- ADR-008 sets the bounded Neo4j projection and sizing policy; verify actual AuraDB
+  limits in the Aura console when creating the instance (TODO(verify)).
 - ADR-009 resolved the initial 384-dimensional embedding baseline and versioned-table
   migration policy; verify the model card and license before implementation.
 - ADR-010 resolved immutable run outputs plus manifest pointers for lake reads.
 - ADR-011 resolved the `/trending` contract and Phase 2/Phase 5 implementation split.
+- ADR-012 resolves lake/private-text retention periods and manifest-safe cleanup.
+- ADR-013 resolves embedding-dimension startup validation per versioned table.
 
 ## Cross-document ambiguities
 
@@ -33,11 +32,16 @@ This file records ambiguity, contradiction, and unverified facts found in the su
 - AGENTS requires mypy strict on new Python code and TypeScript strict/ESLint/Prettier, but supported Python/Node versions, package managers, lockfile formats, and exact tool versions are not specified.
 - AGENTS says every task ends with tests, lint/type checks, and docs updates; some roadmap tasks are infrastructure/manual tasks where a local check may be impossible. Define the CI substitute and evidence standard.
 - ADR-010 resolves the prior append-only/overwrite wording using immutable run outputs
-  and a manifest pointer; define the cleanup value N during implementation.
+  and a manifest pointer. ADR-012 sets `RUN_RETENTION_DAYS` default to 14; verify
+  storage lifecycle behavior during implementation.
 - ADR-002 resolves private article-text persistence, access, and 30-day expiry; the
   remaining implementation question is the exact storage adapter and lifecycle test.
 - ADR-009 resolves the initial embedding dimension and versioned tables; verify the
   model card/license and define migration SQL during T1.1.
+- ADR-008 uses the stated AuraDB Free lower-bound sizing values; verify actual limits
+  in the Aura console before production configuration.
+- ADR-013 requires `EMBEDDING_DIM` startup validation against the table version; the
+  concrete migration/startup implementation remains to be defined in T1.1.
 - Event extraction says input may include truncated text, while the article text policy is ambiguous for transient processing and logs. Define maximum token budget and redaction/logging guarantees.
 - Article status values are listed, but allowed transitions, retry/failed reason storage, and whether stages may skip statuses are undefined.
 - “Merge same-surface mentions per article” conflicts with mention offsets and potentially distinct contexts; define merge key and whether all spans are retained.
