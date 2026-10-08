@@ -6,9 +6,9 @@ The local stack supports search/entity/graph/trending/article flows, generated-c
 ## T2.0 API contract documentation
 - **Goal:** Define the API contract in `docs/API.md` before endpoint implementation.
 - **Files:** Create `docs/API.md`; reference it from Phase 2 task documentation.
-- **Approach:** Specify route/method, request and response schemas, pagination, standard errors, and bounds for health, entity search/detail/neighbors, graph path, trending, and article metadata. Specify that responses never include article text. Define `/trending` OpenAPI schema per ADR-011, including fields, ordering, and the shared contract expected of both implementations.
+- **Approach:** Specify route/method, request and response schemas, pagination, standard errors, cache TTLs, rate limits, and bounds for health, entity search/detail/neighbors, graph path, trending, and article metadata. Specify that responses never include article text. Define `/trending` OpenAPI schema per ADR-011, including fields, ordering, and the shared contract expected of both implementations.
 - **Dependencies:** Phase 0 and ADR-011.
-- **Acceptance:** `docs/API.md` defines all Phase 2 endpoints and the `/trending` contract; its schemas and examples are internally consistent and suitable to implement as OpenAPI models.
+- **Acceptance:** `docs/API.md` defines all Phase 2 endpoints, schemas, pagination, error model, cache TTLs, rate limits, and the `/trending` contract; its examples are internally consistent and suitable to implement as OpenAPI models.
 - **Tests:** Documentation review/check that every endpoint in `docs/ROADMAP.md` T2.2 and ADR-011 is specified; no runtime tests at this documentation task.
 - **Risks/unknowns:** Product-level response fields, pagination details, and endpoint limits are not established in existing base docs and must be documented as decisions or explicit open questions.
 - **Do not:** Implement API/application code or contradict privacy rules in `AGENTS.md` and `docs/ARCHITECTURE.md`.

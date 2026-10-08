@@ -2,7 +2,10 @@
 
 - [ ] GitHub repo, branch protection on main, require CI
 - [ ] Neon project + pgvector extension enabled; connection string -> .env
-- [ ] Neo4j AuraDB Free instance; note free-tier limits and inactivity pausing behavior
+- [ ] Neo4j AuraDB Free instance; note free-tier limits and inactivity pausing behavior.
+  After creating the Aura instance, record the actual node and relationship limits shown
+  in the console and set `NEO4J_MAX_NODES` and `NEO4J_MAX_RELS` accordingly; note the
+  inactivity pause behavior shown.
 - [ ] LLM provider API key(s) (extraction + embeddings); set spend limits
 - [ ] Upstash Redis (or local only until Phase 2)
 - [ ] Vercel project linked to web/

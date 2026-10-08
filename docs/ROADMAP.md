@@ -24,6 +24,8 @@ Exit: `make check` green in CI on an empty-but-wired repo; `docker compose up` h
 Exit: one-day run end to end locally in Docker; ER F1 reported; tests >= 80% on pipeline/.
 
 ## Phase 2 — API, cache, web, instrumentation
+- T2.0 Write `docs/API.md`: endpoint contracts, schemas, pagination, error model, cache TTLs, and rate limits
+- T2.1-T2.6 depend on T2.0.
 - T2.1 FastAPI skeleton, health, config, OTel instrumentation, OpenAPI export
 - T2.2 Endpoints: /entities/search, /entities/{id}, /entities/{id}/neighbors, /graph/path,
   /trending, /articles/{id}

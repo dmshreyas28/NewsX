@@ -43,16 +43,15 @@ changed solely to hide an audit finding.
 | RSS/GDELT/feedparser/trafilatura, spaCy, Wikidata | yes | Match `docs/ARCHITECTURE.md` and `docs/ENTITY_RESOLUTION.md`. |
 | Prompt versions, JSON schema, temperature 0, retry/cache/logging | yes | Match `docs/PROMPTS.md` and `AGENTS.md`. |
 | ADR-001 through ADR-013 | yes | ADR-006 and ADR-007 remain open; ADR-008, ADR-009, ADR-010, ADR-011, ADR-012, and ADR-013 are accepted. |
-| `docs/API.md` contract | planned by phase task | New Phase 2 T2.0 task; it has no corresponding roadmap task ID yet. |
+| `docs/API.md` contract | yes | Roadmap and Phase 2 task plan both define T2.0, and T2.1-T2.6 depend on it. |
 | `config/models.yaml` | yes | Referenced by `PROMPTS.md`, but the file is not created by the base-doc task. |
 | `docs/RUNBOOK.md`, `docs/WRITEUP.md`, `docs/assets/`, `load/` | no | Planned outputs only; not base documents. |
 
 ## 2. Roadmap coverage
 
-Every roadmap task T0.1 through T7.4 has a matching section in the phase task files.
-Phase task T2.0 (write `docs/API.md`) currently has no matching task in
-`docs/ROADMAP.md`; this is an explicit task-file/roadmap alignment issue introduced
-with the API documentation task.
+Every roadmap task ID has a matching section in `docs/tasks/`, and every task-file
+section ID has a matching task in `docs/ROADMAP.md`. This includes Phase 2 T2.0.
+The dependency note in the roadmap and task plan specifies that T2.1-T2.6 depend on T2.0.
 
 ## 3. Remaining contradictions or issues
 
@@ -84,7 +83,7 @@ with the API documentation task.
 - OTel/Grafana exporter, metric labels, retention, alert thresholds, load profile,
   SLO, and representative data size remain undefined.
 - `docs/API.md` has not yet been written; Phase 2 T2.0 requires it before the other
-  Phase 2 tasks, but T2.0 is not yet represented in the roadmap.
+  Phase 2 tasks.
 - The remaining Phase 2 API decisions needed for `docs/API.md` include exact
   non-trending response schemas, pagination, error payload, graph path semantics, and
   endpoint bounds.
